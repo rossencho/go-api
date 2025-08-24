@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -45,7 +46,7 @@ func CreateCashier(c *fiber.Ctx) error {
 		})
 }
 
-func GetCashierDetails(c *fiber.Ctx) error {
+func GetCashierById(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var cashier models.Cashier
 
@@ -76,7 +77,7 @@ func CashierList(c *fiber.Ctx) error {
 
 	config.DB.Select("*").Limit(limit).Offset(offset).Find(&cashiers).Count(&count)
 
-	return c.Status(200).JSON(
+	return c.Status(fiber.StatusOK).JSON(
 		fiber.Map{
 			"success": true,
 			"message": "Cashier list",
@@ -85,9 +86,74 @@ func CashierList(c *fiber.Ctx) error {
 }
 
 func UpdateCashier(c *fiber.Ctx) error {
-	return nil
+	var cashier models.Cashier
+	var updateData map[string]string
+
+	id, err := c.ParamsInt("id")
+	if err != nil || id <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(
+			fiber.Map{
+				"error": "Invalid cashier ID",
+			})
+
+	}
+
+	config.DB.First(&cashier, id)
+	if cashier.Id == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(
+			fiber.Map{
+				"error": "Cashier not found",
+			})
+	}
+
+	err = c.BodyParser(&updateData)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(
+			fiber.Map{
+				"error": "Failed to parse request body",
+			})
+	}
+
+	if name, exists := updateData["name"]; exists {
+		cashier.Name = name
+	}
+	if passcode, exists := updateData["passcode"]; exists {
+		cashier.Passcode = passcode
+	}
+
+	config.DB.Save(&cashier)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"message": "Cashier updated",
+		"data":    cashier,
+	})
+
 }
 
 func DeleteCashier(c *fiber.Ctx) error {
-	return nil
+	id, err := c.ParamsInt("id")
+	if err != nil || id <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(
+			fiber.Map{
+				"error": "Invalid cashier ID",
+			})
+	}
+
+	var cashier models.Cashier
+	config.DB.First(&cashier, id)
+	if cashier.Id == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(
+			fiber.Map{
+				"error": "Cashier not found",
+			})
+	}
+
+	config.DB.Delete(&cashier)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"message": fmt.Sprintf("Cashier with ID %d deleted", id),
+	})
+
 }
