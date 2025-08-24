@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rossencho/go-api/config"
-	models "github.com/rossencho/go-api/models"
+	"github.com/rossencho/go-api/models"
 )
 
 func CreateCashier(c *fiber.Ctx) error {
@@ -46,11 +46,42 @@ func CreateCashier(c *fiber.Ctx) error {
 }
 
 func GetCashierDetails(c *fiber.Ctx) error {
-	return nil
+	id := c.Params("id")
+	var cashier models.Cashier
+
+	config.DB.Select("*").Where("id = ?", id).First(&cashier)
+	if cashier.Id == 0 {
+		return c.Status(404).JSON(
+			fiber.Map{
+				"success": false,
+				"message": "Cashier not found",
+			})
+	}
+
+	return c.Status(200).JSON(
+		fiber.Map{
+			"success": true,
+			"message": "Cashier details",
+			"data":    cashier,
+		})
+
 }
 
 func CashierList(c *fiber.Ctx) error {
-	return c.SendString("List of cashiers")
+	var cashiers []models.Cashier
+	var count int64
+
+	limit := c.QueryInt("limit", 100)
+	offset := c.QueryInt("offset", 0)
+
+	config.DB.Select("*").Limit(limit).Offset(offset).Find(&cashiers).Count(&count)
+
+	return c.Status(200).JSON(
+		fiber.Map{
+			"success": true,
+			"message": "Cashier list",
+			"data":    cashiers,
+		})
 }
 
 func UpdateCashier(c *fiber.Ctx) error {
