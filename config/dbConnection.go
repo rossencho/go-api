@@ -26,6 +26,8 @@ func Connect() {
 		panic("db connection failed")
 	}
 
+	DB = db
+
 	autoMigrate(db)
 }
 
